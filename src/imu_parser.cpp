@@ -1,6 +1,7 @@
 #include "imu_parser.h"
 #include <algorithm>
 #include <cstring>
+#include <limits>
 
 const std::array<uint8_t, 4> ImuParser::HEADER_ = {ImuParser::HEADER_BYTE0, ImuParser::HEADER_BYTE1,
                                                    ImuParser::HEADER_BYTE2, ImuParser::HEADER_BYTE3};
@@ -41,7 +42,10 @@ bool ImuParser::parse(ImuRawData& out) {
 
     // 校验和验证
     if (!validateChecksum(pos)) {
-      checksum_fails_++;
+      if (checksum_fails_ == std::numeric_limits<size_t>::max())
+        checksum_fails_ = 0;
+      else
+        ++checksum_fails_;
       // 跳过当前帧头的第一个字节，重新搜索
       buf_.erase(buf_.begin());
       continue;
@@ -61,7 +65,10 @@ bool ImuParser::parse(ImuRawData& out) {
 
     // 移除已处理的帧
     buf_.erase(buf_.begin(), buf_.begin() + FRAME_SIZE);
-    frame_count_++;
+    if (frame_count_ == std::numeric_limits<size_t>::max())
+      frame_count_ = 0;
+    else
+      ++frame_count_;
     return true;
   }
 

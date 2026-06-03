@@ -94,7 +94,10 @@ void ImuDriverNode::run() {
     // 尝试解析所有可用帧
     ImuRawData raw;
     while (parser_->parse(raw)) {
-      total_frames_++;
+      if (total_frames_ == std::numeric_limits<size_t>::max())
+        total_frames_ = 0;
+      else
+        ++total_frames_;
       publisher_->publish(raw, ros::Time::now());
     }
 
@@ -115,14 +118,14 @@ void ImuDriverNode::shutdown() {
 
 void ImuDriverNode::publishDiagnostics() {
   const ros::Time now           = ros::Time::now();
-  const double    diag_interval = 5.0; // 每 5 秒输出一次诊断
+  const double    diag_interval = 60.0; // 每 60 秒输出一次诊断
 
   if ((now - last_diag_time_).toSec() < diag_interval) {
     return;
   }
 
   size_t fails = parser_ ? parser_->checksumFailCount() : 0;
-  ROS_INFO("Diagnostics: frames_ok=%zu, checksum_fails=%zu, buf_size=%zu", total_frames_, fails, parser_ ? 0 : 0);
+  ROS_INFO("Diagnostics: frames_ok=%zu, checksum_fails=%zu", total_frames_, fails);
 
   last_diag_time_ = now;
 }

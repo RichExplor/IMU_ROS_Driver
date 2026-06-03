@@ -49,22 +49,17 @@ size_t SerialPort::read(uint8_t* buf, size_t max_len) {
   if (!isOpen())
     return 0;
 
-  if (timeout_ms_ <= 0) {
-    // 阻塞读取（无超时）
-    boost::system::error_code ec;
-    size_t                    n = serial_->read_some(boost::asio::buffer(buf, max_len), ec);
-    if (ec) {
-      ROS_ERROR("Serial read error: %s", ec.message().c_str());
-      return 0;
-    }
-    return n;
+  int effective_timeout = timeout_ms_;
+  if (effective_timeout <= 0) {
+    ROS_WARN_THROTTLE(60, "Serial timeout_ms <= 0. For stability, using 100 ms effective timeout.");
+    effective_timeout = 100;
   }
 
   // 带超时的异步读取
   size_t                    bytes_read = 0;
   boost::system::error_code read_ec;
 
-  boost::asio::deadline_timer timer(io_, boost::posix_time::milliseconds(timeout_ms_));
+  boost::asio::deadline_timer timer(io_, boost::posix_time::milliseconds(effective_timeout));
 
   // 设置超时回调：取消串口读取
   timer.async_wait([this](const boost::system::error_code& ec_timer) {
@@ -77,14 +72,14 @@ size_t SerialPort::read(uint8_t* buf, size_t max_len) {
   serial_->async_read_some(boost::asio::buffer(buf, max_len),
                            [&bytes_read, &read_ec](const boost::system::error_code& ec, size_t n) {
                              read_ec = ec;
-                             if (!ec || ec == boost::asio::error::operation_aborted) {
+                             if (!ec) {
                                bytes_read = n;
                              }
                            });
 
   // 运行 I/O 服务直到其中一个操作完成
   io_.restart();
-  io_.run_one();
+  io_.run();
 
   // 取消可能仍在等待的定时器
   timer.cancel();
