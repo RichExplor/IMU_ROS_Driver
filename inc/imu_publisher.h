@@ -62,13 +62,14 @@ private:
   static constexpr double COV_ZERO    = 0.0;
 
   /// @brief 转换原始数据为 SI 单位（m/s^2, rad/s, T）
-  static constexpr double GRAVITY     = 9.80665;       // 标准重力加速度
-  static constexpr double SCALE_ACCEL = 1.0 / 32768.0; // acc缩放因子
-  static constexpr double SCALE_GYRO  = 1.0 / 32768.0; // gyro缩放因子
-  static constexpr double SCALE_MAG   = 1.0;           // mag缩放因子
+  static constexpr double GRAVITY     = 9.80665; // 标准重力加速度
+  // 新协议原始 DATA 需乘以 1e-6 得到物理量（除温度）
+  static constexpr double SCALE_ACCEL = 1e-6; // 加速度: DATA * SCALE_ACCEL -> m/s^2
+  static constexpr double SCALE_GYRO  = 1e-6; // 角速度: DATA * SCALE_GYRO -> deg/s
+  static constexpr double SCALE_MAG   = 1e-6; // 磁力归一化: DATA * SCALE_MAG -> 单位向量分量
 
-  /// @brief 磁场数据缩放因子（Tesla = mGauss * 1e-7）
-  static constexpr double SCALE_MAG_TESLA = 1e-7;
+  // 磁场强度转 Tesla：DATA * 0.001 (mGauss) -> Tesla = DATA * 0.001 * 1e-7 = DATA * 1e-10
+  static constexpr double SCALE_MAG_STRENGTH_TO_TESLA = 1e-10;
 
   /// @brief 角度转换常量
   static constexpr double Rad2Deg = 180.0 / M_PI;

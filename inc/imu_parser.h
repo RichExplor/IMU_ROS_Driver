@@ -4,64 +4,76 @@
 #include <cstdint>
 #include <vector>
 
+#pragma once
+
+#include <array>
+#include <cstdint>
+#include <vector>
+
 /// @brief IMU 原始数据（解析后、缩放前）
 struct ImuRawData {
-  int16_t ax, ay, az; ///< 线性加速度原始值
-  int16_t wx, wy, wz; ///< 角速度原始值
-  int16_t hx, hy, hz; ///< 磁场原始值
-  bool    valid;      ///< 校验是否通过
+  // 原始数据均为小端 32-bit（除温度为 16-bit）
+  int32_t ax, ay, az; ///< 线性加速度原始值（每轴 4 字节，Value = DATA * 1e-6 m/s^2）
+  int32_t wx, wy, wz; ///< 角速度原始值（每轴 4 字节，Value = DATA * 1e-6 deg/s）
+  int32_t hx, hy, hz; ///< 磁场原始值（每轴 4 字节，归一化或强度，需区分）
+
+  // 可选的姿态/欧拉/四元数
+  int32_t q0, q1, q2, q3; ///< 四元数分量（每分量 4 字节，Value = DATA * 1e-6）
+  int32_t roll, pitch, yaw; ///< 欧拉角（每轴 4 字节，Value = DATA * 1e-6 deg）
+
+  int16_t temp; ///< 温度（2 字节，Value = DATA * 0.01 °C）
+
+  // 字段存在标志
+  bool has_accel;
+  bool has_gyro;
+  bool has_mag_norm;      // 0x30
+  bool has_mag_strength;  // 0x31
+  bool has_quat;          // 0x41
+  bool has_euler;         // 0x40
+  bool has_temp;          // 0x01
+
+  bool valid;      ///< 校验是否通过
+
+  ImuRawData()
+      : ax(0), ay(0), az(0), wx(0), wy(0), wz(0), hx(0), hy(0), hz(0), q0(0), q1(0), q2(0), q3(0), roll(0),
+        pitch(0), yaw(0), temp(0), has_accel(false), has_gyro(false), has_mag_norm(false), has_mag_strength(false),
+        has_quat(false), has_euler(false), has_temp(false), valid(false) {}
 };
 
-/// @brief IMU 二进制协议解析器
-///
-/// 协议格式（24 字节/帧）：
-///   [0..3]  帧头 0x4E 0x4A 0x13 0x01
-///   [4..21] 数据（9 个 int16：ax,ay,az,wx,wy,wz,hx,hy,hz）
-///   [22..23] 校验和（uint16 小端，前 22 字节之和）
+/// @brief IMU 二进制协议解析器（新协议：header=0x59,0x53）
 class ImuParser {
 public:
   ImuParser();
 
   /// @brief 向解析器输入新数据
-  /// @param data 数据指针
-  /// @param len 数据长度
   void feed(const uint8_t* data, size_t len);
 
   /// @brief 尝试解析一帧
-  /// @param out 输出解析结果
-  /// @return 成功解析返回 true，数据不足或校验失败返回 false
+  /// @return 成功解析返回 true（out 填充），否则返回 false
   bool parse(ImuRawData& out);
 
   /// @brief 获取校验失败计数
-  size_t checksumFailCount() const {
-    return checksum_fails_;
-  }
+  size_t checksumFailCount() const { return checksum_fails_; }
 
   /// @brief 获取成功解析帧数
-  size_t frameCount() const {
-    return frame_count_;
-  }
+  size_t frameCount() const { return frame_count_; }
 
   // 协议常量 — 公开以便测试
-  static constexpr uint8_t HEADER_BYTE0  = 0x4E;
-  static constexpr uint8_t HEADER_BYTE1  = 0x4A;
-  static constexpr uint8_t HEADER_BYTE2  = 0x13;
-  static constexpr uint8_t HEADER_BYTE3  = 0x01;
-  static constexpr size_t  FRAME_SIZE    = 24;  ///< 完整帧长度（字节）
-  static constexpr size_t  DATA_SIZE     = 22;  ///< 参与校验的数据长度
-  static constexpr size_t  CHECKSUM_SIZE = 2;   ///< 校验和长度
-  static constexpr size_t  HEADER_SIZE   = 4;   ///< 帧头长度
-  static constexpr size_t  READ_BUF_SIZE = 256; ///< 单次读取缓冲区大小
+  static constexpr uint8_t HEADER_BYTE0  = 0x59;
+  static constexpr uint8_t HEADER_BYTE1  = 0x53;
+  static constexpr size_t  HEADER_SIZE   = 2;
+  static constexpr size_t  READ_BUF_SIZE = 512; ///< 单次读取缓冲区大小
 
 private:
-  std::vector<uint8_t>                buf_;
-  static const std::array<uint8_t, 4> HEADER_;
-  size_t                              checksum_fails_;
-  size_t                              frame_count_;
+  std::vector<uint8_t>           buf_;
+  static const std::array<uint8_t, 2> HEADER_;
+  size_t                          checksum_fails_;
+  size_t                          frame_count_;
 
-  /// @brief 验证指定位置的帧校验和
+  /// @brief 验证从 pos 开始的帧（pos 指向帧头第一个字节）的校验和
   bool validateChecksum(size_t pos) const;
 
-  /// @brief 从缓冲区指定偏移读取 int16（小端）
+  /// @brief 从缓冲区读取小端 int16 / int32
   int16_t readI16(size_t offset) const;
+  int32_t readI32(size_t offset) const;
 };

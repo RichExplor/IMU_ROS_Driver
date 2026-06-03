@@ -5,14 +5,14 @@ ImuPublisher::ImuPublisher(ros::NodeHandle& nh, bool publish_custom, bool publis
                            std::shared_ptr<imu_algorithm::AttitudeEstimator> estimator)
     : publish_custom_(publish_custom), publish_sensor_msgs_(publish_sensor_msgs), accel_scale_(accel_scale),
       gyro_scale_(gyro_scale), mag_scale_(mag_scale), frame_id_(frame_id), estimator_(estimator), first_frame_(true) {
-  // acc缩放系数
-  accel_scale_ = SCALE_ACCEL * GRAVITY * accel_scale;
+  // acc 缩放系数：原始 DATA * SCALE_ACCEL = m/s^2
+  accel_scale_ = SCALE_ACCEL * accel_scale;
 
-  // gyro缩放系数
+  // gyro 缩放系数：原始 DATA * SCALE_GYRO = deg/s
   gyro_scale_ = SCALE_GYRO * gyro_scale;
 
-  // mag缩放系数
-  mag_scale_ = SCALE_MAG * /*SCALE_MAG_TESLA*/ mag_scale;
+  // mag 缩放系数（归一化矢量）
+  mag_scale_ = SCALE_MAG * mag_scale;
 
   if (publish_custom_) {
     pub_custom_ = nh.advertise<imu_ros_driver::ImuData>("imu/data_serial", 10);
@@ -39,20 +39,67 @@ void ImuPublisher::publish(const ImuRawData& raw, const ros::Time& stamp) {
   geometry_msgs::Vector3    magnetic_field;
   geometry_msgs::Quaternion orientation;
 
-  linear_acceleration.x = static_cast<double>(raw.ax) * accel_scale_;
-  linear_acceleration.y = static_cast<double>(raw.ay) * accel_scale_;
-  linear_acceleration.z = static_cast<double>(raw.az) * accel_scale_;
+  // 线性加速度
+  if (raw.has_accel) {
+    linear_acceleration.x = static_cast<double>(raw.ax) * accel_scale_;
+    linear_acceleration.y = static_cast<double>(raw.ay) * accel_scale_;
+    linear_acceleration.z = static_cast<double>(raw.az) * accel_scale_;
+  } else {
+    linear_acceleration.x = linear_acceleration.y = linear_acceleration.z = 0.0;
+  }
 
-  angular_velocity.x = static_cast<double>(raw.wx) * gyro_scale_ * Deg2Rad;
-  angular_velocity.y = static_cast<double>(raw.wy) * gyro_scale_ * Deg2Rad;
-  angular_velocity.z = static_cast<double>(raw.wz) * gyro_scale_ * Deg2Rad;
+  // 角速度（原数据为 deg/s * 1e-6，转换为 rad/s）
+  if (raw.has_gyro) {
+    angular_velocity.x = static_cast<double>(raw.wx) * gyro_scale_ * Deg2Rad;
+    angular_velocity.y = static_cast<double>(raw.wy) * gyro_scale_ * Deg2Rad;
+    angular_velocity.z = static_cast<double>(raw.wz) * gyro_scale_ * Deg2Rad;
+  } else {
+    angular_velocity.x = angular_velocity.y = angular_velocity.z = 0.0;
+  }
 
-  magnetic_field.x = static_cast<double>(raw.hx) * mag_scale_;
-  magnetic_field.y = static_cast<double>(raw.hy) * mag_scale_;
-  magnetic_field.z = static_cast<double>(raw.hz) * mag_scale_;
+  // 磁场：优先使用强度（0x31），否则使用归一化（0x30）
+  if (raw.has_mag_strength) {
+    // 原始单位：DATA * 0.001 mGauss -> 转 Tesla
+    magnetic_field.x = static_cast<double>(raw.hx) * SCALE_MAG_STRENGTH_TO_TESLA;
+    magnetic_field.y = static_cast<double>(raw.hy) * SCALE_MAG_STRENGTH_TO_TESLA;
+    magnetic_field.z = static_cast<double>(raw.hz) * SCALE_MAG_STRENGTH_TO_TESLA;
+  } else if (raw.has_mag_norm) {
+    magnetic_field.x = static_cast<double>(raw.hx) * mag_scale_;
+    magnetic_field.y = static_cast<double>(raw.hy) * mag_scale_;
+    magnetic_field.z = static_cast<double>(raw.hz) * mag_scale_;
+  } else {
+    magnetic_field.x = magnetic_field.y = magnetic_field.z = 0.0;
+  }
 
-  // 2. 姿态解算
-  attitudeEstimate(linear_acceleration, angular_velocity, magnetic_field, orientation, stamp);
+  // 2. 如果有四元数直接使用；否则进行姿态解算（需要 accel + gyro）
+  if (raw.has_quat) {
+    // 四元数分量 DATA * 1e-6 -> 无量纲
+    orientation.x = static_cast<double>(raw.q1) * 1e-6;
+    orientation.y = static_cast<double>(raw.q2) * 1e-6;
+    orientation.z = static_cast<double>(raw.q3) * 1e-6;
+    orientation.w = static_cast<double>(raw.q0) * 1e-6;
+  } else if (estimator_ && raw.has_accel && raw.has_gyro) {
+    attitudeEstimate(linear_acceleration, angular_velocity, magnetic_field, orientation, stamp);
+  } else if (raw.has_euler) {
+    // 如果只有欧拉角，转换为四元数（单位 deg -> rad）
+    double roll = static_cast<double>(raw.roll) * 1e-6 * Deg2Rad;
+    double pitch = static_cast<double>(raw.pitch) * 1e-6 * Deg2Rad;
+    double yaw = static_cast<double>(raw.yaw) * 1e-6 * Deg2Rad;
+    Eigen::AngleAxisd rx(roll, Eigen::Vector3d::UnitX());
+    Eigen::AngleAxisd ry(pitch, Eigen::Vector3d::UnitY());
+    Eigen::AngleAxisd rz(yaw, Eigen::Vector3d::UnitZ());
+    Eigen::Quaterniond q = rz * ry * rx;
+    orientation.x = q.x();
+    orientation.y = q.y();
+    orientation.z = q.z();
+    orientation.w = q.w();
+  } else {
+    // 无可用姿态信息，使用单位四元数
+    orientation.x = 0.0;
+    orientation.y = 0.0;
+    orientation.z = 0.0;
+    orientation.w = 1.0;
+  }
 
   // 3. 发布自定义消息和标准消息
   if (publish_custom_) {
