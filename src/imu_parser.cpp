@@ -1,7 +1,7 @@
 #include "imu_parser.h"
 #include <algorithm>
-#include <cstring>
 #include <cstdint>
+#include <cstring>
 #include <limits>
 
 const std::array<uint8_t, 2> ImuParser::HEADER_ = {ImuParser::HEADER_BYTE0, ImuParser::HEADER_BYTE1};
@@ -61,7 +61,7 @@ bool ImuParser::parse(ImuRawData& out) {
     size_t msg_end   = msg_start + len;
 
     // 重置输出
-    out = ImuRawData();
+    out       = ImuRawData();
     out.valid = true;
 
     size_t i = msg_start;
@@ -75,72 +75,72 @@ bool ImuParser::parse(ImuRawData& out) {
 
       const uint8_t* payload = &buf_[i + 2];
 
-      auto read_i32 = [&](size_t off)->int32_t {
-        size_t o = off;
-        uint32_t v = static_cast<uint32_t>(payload[o]) | (static_cast<uint32_t>(payload[o+1])<<8) |
-                     (static_cast<uint32_t>(payload[o+2])<<16) | (static_cast<uint32_t>(payload[o+3])<<24);
+      auto read_i32 = [&](size_t off) -> int32_t {
+        size_t   o = off;
+        uint32_t v = static_cast<uint32_t>(payload[o]) | (static_cast<uint32_t>(payload[o + 1]) << 8) |
+                     (static_cast<uint32_t>(payload[o + 2]) << 16) | (static_cast<uint32_t>(payload[o + 3]) << 24);
         return static_cast<int32_t>(v);
       };
 
-      auto read_i16 = [&](size_t off)->int16_t {
-        size_t o = off;
-        uint16_t v = static_cast<uint16_t>(payload[o]) | (static_cast<uint16_t>(payload[o+1])<<8);
+      auto read_i16 = [&](size_t off) -> int16_t {
+        size_t   o = off;
+        uint16_t v = static_cast<uint16_t>(payload[o]) | (static_cast<uint16_t>(payload[o + 1]) << 8);
         return static_cast<int16_t>(v);
       };
 
       switch (data_id) {
       case 0x01: // 温度（2 字节，单位 0.01 °C）
         if (pkt_len >= 2) {
-          out.temp = read_i16(0);
+          out.temp     = read_i16(0);
           out.has_temp = true;
         }
         break;
       case 0x10: // 加速度 (x,y,z) 每轴 4 字节，单位 1e-6 m/s^2
         if (pkt_len >= 12) {
-          out.ax = read_i32(0);
-          out.ay = read_i32(4);
-          out.az = read_i32(8);
+          out.ax        = read_i32(0);
+          out.ay        = read_i32(4);
+          out.az        = read_i32(8);
           out.has_accel = true;
         }
         break;
       case 0x20: // 角速度 (x,y,z) 每轴 4 字节，单位 1e-6 deg/s
         if (pkt_len >= 12) {
-          out.wx = read_i32(0);
-          out.wy = read_i32(4);
-          out.wz = read_i32(8);
+          out.wx       = read_i32(0);
+          out.wy       = read_i32(4);
+          out.wz       = read_i32(8);
           out.has_gyro = true;
         }
         break;
       case 0x30: // 磁场归一化 (x,y,z) 每轴 4 字节，单位 1e-6 (无量纲)
         if (pkt_len >= 12) {
-          out.hx = read_i32(0);
-          out.hy = read_i32(4);
-          out.hz = read_i32(8);
+          out.hx           = read_i32(0);
+          out.hy           = read_i32(4);
+          out.hz           = read_i32(8);
           out.has_mag_norm = true;
         }
         break;
       case 0x31: // 磁场强度 (x,y,z) 每轴 4 字节，单位 mGauss * 0.001
         if (pkt_len >= 12) {
-          out.hx = read_i32(0);
-          out.hy = read_i32(4);
-          out.hz = read_i32(8);
+          out.hx               = read_i32(0);
+          out.hy               = read_i32(4);
+          out.hz               = read_i32(8);
           out.has_mag_strength = true;
         }
         break;
       case 0x40: // 欧拉角 (p,r,y) 每轴 4 字节，单位 1e-6 deg
         if (pkt_len >= 12) {
-          out.roll  = read_i32(0);
-          out.pitch = read_i32(4);
-          out.yaw   = read_i32(8);
+          out.roll      = read_i32(0);
+          out.pitch     = read_i32(4);
+          out.yaw       = read_i32(8);
           out.has_euler = true;
         }
         break;
       case 0x41: // 四元数 q0..q3 每分量 4 字节，单位 1e-6
         if (pkt_len >= 16) {
-          out.q0 = read_i32(0);
-          out.q1 = read_i32(4);
-          out.q2 = read_i32(8);
-          out.q3 = read_i32(12);
+          out.q0       = read_i32(0);
+          out.q1       = read_i32(4);
+          out.q2       = read_i32(8);
+          out.q3       = read_i32(12);
           out.has_quat = true;
         }
         break;
@@ -169,9 +169,9 @@ bool ImuParser::parse(ImuRawData& out) {
 
 bool ImuParser::validateChecksum(size_t pos) const {
   // 从 TID 开始累加到 MESSAGE 结束（包含 LEN）
-  size_t tid_pos = pos + HEADER_SIZE;
-  uint8_t len = buf_[pos + HEADER_SIZE + 2];
-  size_t msg_end = pos + HEADER_SIZE + 2 + 1 + static_cast<size_t>(len); // first byte after MESSAGE
+  size_t  tid_pos = pos + HEADER_SIZE;
+  uint8_t len     = buf_[pos + HEADER_SIZE + 2];
+  size_t  msg_end = pos + HEADER_SIZE + 2 + 1 + static_cast<size_t>(len); // first byte after MESSAGE
 
   uint32_t sum = 0;
   for (size_t i = tid_pos; i < msg_end; ++i) {
@@ -188,5 +188,6 @@ int16_t ImuParser::readI16(size_t offset) const {
 
 int32_t ImuParser::readI32(size_t offset) const {
   return static_cast<int32_t>(static_cast<uint32_t>(buf_[offset]) | (static_cast<uint32_t>(buf_[offset + 1]) << 8) |
-                              (static_cast<uint32_t>(buf_[offset + 2]) << 16) | (static_cast<uint32_t>(buf_[offset + 3]) << 24));
+                              (static_cast<uint32_t>(buf_[offset + 2]) << 16) |
+                              (static_cast<uint32_t>(buf_[offset + 3]) << 24));
 }

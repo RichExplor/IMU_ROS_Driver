@@ -82,17 +82,17 @@ void ImuPublisher::publish(const ImuRawData& raw, const ros::Time& stamp) {
     attitudeEstimate(linear_acceleration, angular_velocity, magnetic_field, orientation, stamp);
   } else if (raw.has_euler) {
     // 如果只有欧拉角，转换为四元数（单位 deg -> rad）
-    double roll = static_cast<double>(raw.roll) * 1e-6 * Deg2Rad;
-    double pitch = static_cast<double>(raw.pitch) * 1e-6 * Deg2Rad;
-    double yaw = static_cast<double>(raw.yaw) * 1e-6 * Deg2Rad;
-    Eigen::AngleAxisd rx(roll, Eigen::Vector3d::UnitX());
-    Eigen::AngleAxisd ry(pitch, Eigen::Vector3d::UnitY());
-    Eigen::AngleAxisd rz(yaw, Eigen::Vector3d::UnitZ());
+    double             roll  = static_cast<double>(raw.roll) * 1e-6 * Deg2Rad;
+    double             pitch = static_cast<double>(raw.pitch) * 1e-6 * Deg2Rad;
+    double             yaw   = static_cast<double>(raw.yaw) * 1e-6 * Deg2Rad;
+    Eigen::AngleAxisd  rx(roll, Eigen::Vector3d::UnitX());
+    Eigen::AngleAxisd  ry(pitch, Eigen::Vector3d::UnitY());
+    Eigen::AngleAxisd  rz(yaw, Eigen::Vector3d::UnitZ());
     Eigen::Quaterniond q = rz * ry * rx;
-    orientation.x = q.x();
-    orientation.y = q.y();
-    orientation.z = q.z();
-    orientation.w = q.w();
+    orientation.x        = q.x();
+    orientation.y        = q.y();
+    orientation.z        = q.z();
+    orientation.w        = q.w();
   } else {
     // 无可用姿态信息，使用单位四元数
     orientation.x = 0.0;

@@ -62,7 +62,7 @@ private:
   static constexpr double COV_ZERO    = 0.0;
 
   /// @brief 转换原始数据为 SI 单位（m/s^2, rad/s, T）
-  static constexpr double GRAVITY     = 9.80665; // 标准重力加速度
+  static constexpr double GRAVITY = 9.80665; // 标准重力加速度
   // 新协议原始 DATA 需乘以 1e-6 得到物理量（除温度）
   static constexpr double SCALE_ACCEL = 1e-6; // 加速度: DATA * SCALE_ACCEL -> m/s^2
   static constexpr double SCALE_GYRO  = 1e-6; // 角速度: DATA * SCALE_GYRO -> deg/s
