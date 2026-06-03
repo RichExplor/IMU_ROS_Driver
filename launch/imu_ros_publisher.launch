@@ -9,10 +9,10 @@
   <param name="timeout_ms" type="int" value="100"/>
 
   <!-- 是否发布自定义 ImuData 消息（默认 true） -->
-  <param name="publish_custom" type="bool" value="true"/>
+  <param name="publish_custom" type="bool" value="false"/>
 
   <!-- 是否发布 sensor_msgs/Imu 与 sensor_msgs/MagneticField（默认 false） -->
-  <param name="publish_sensor_msgs" type="bool" value="false"/>
+  <param name="publish_sensor_msgs" type="bool" value="true"/>
 
   <!-- 缩放系数（应用于 sensor_msgs 发布） -->
   <param name="accel_scale" type="double" value="16.0"/>

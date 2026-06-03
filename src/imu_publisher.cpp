@@ -76,13 +76,13 @@ void ImuPublisher::publish(const ImuRawData& raw, const ros::Time& stamp) {
     imu_msg.header.frame_id = frame_id_;
 
     imu_msg.orientation = orientation;
-    fillCovariance(imu_msg.orientation_covariance, !estimator_); // 有姿态解算时不标记为未知
+    fillCovariance(imu_msg.orientation_covariance.data(), !estimator_); // 有姿态解算时不标记为未知
 
     imu_msg.linear_acceleration = linear_acceleration;
-    fillCovariance(imu_msg.linear_acceleration_covariance, false);
+    fillCovariance(imu_msg.linear_acceleration_covariance.data(), false);
 
     imu_msg.angular_velocity = angular_velocity;
-    fillCovariance(imu_msg.angular_velocity_covariance, false);
+    fillCovariance(imu_msg.angular_velocity_covariance.data(), false);
 
     pub_imu_.publish(imu_msg);
 
@@ -91,7 +91,7 @@ void ImuPublisher::publish(const ImuRawData& raw, const ros::Time& stamp) {
     mag_msg.header.stamp    = stamp;
     mag_msg.header.frame_id = frame_id_;
     mag_msg.magnetic_field  = magnetic_field;
-    fillCovariance(mag_msg.magnetic_field_covariance, false);
+    fillCovariance(mag_msg.magnetic_field_covariance.data(), false);
 
     pub_mag_.publish(mag_msg);
   }
