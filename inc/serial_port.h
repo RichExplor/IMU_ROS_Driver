@@ -18,37 +18,23 @@ public:
 
   /// @brief 打开串口
   /// @return 成功返回 true
-  bool open();
+  bool Open();
 
   /// @brief 关闭串口
-  void close();
+  void Close();
 
   /// @brief 串口是否已打开
-  bool isOpen() const;
+  bool IsOpen() const;
 
   /// @brief 带超时的同步读取
   /// @param buf 接收缓冲区
   /// @param max_len 缓冲区最大长度
   /// @return 实际读取的字节数，超时或错误返回 0
-  size_t read(uint8_t* buf, size_t max_len);
-
-  /// @brief 设置读取超时
-  /// @param timeout_ms 超时时间（毫秒）
-  void setTimeout(int timeout_ms);
-
-  /// @brief 获取串口设备路径
-  const std::string& port() const {
-    return port_;
-  }
-
-  /// @brief 获取波特率
-  int baud() const {
-    return baud_;
-  }
+  size_t Read(uint8_t* buf, size_t max_len);
 
 private:
   boost::asio::io_service                   io_;
-  std::unique_ptr<boost::asio::serial_port> serial_;
+  std::unique_ptr<boost::asio::serial_port> serial_ptr_;
   std::string                               port_;
   int                                       baud_;
   int                                       timeout_ms_;

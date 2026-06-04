@@ -44,7 +44,7 @@ public:
   /// @param ay 加速度计 y（m/s²，机体系）
   /// @param az 加速度计 z（m/s²，机体系）
   /// @param dt 时间步长（秒）
-  void update(double gx, double gy, double gz, double ax, double ay, double az, double dt);
+  void Update(double gx, double gy, double gz, double ax, double ay, double az, double dt);
 
   /// @brief 更新姿态（9轴接口）
   /// @param gx 陀螺仪 x 角速度（rad/s，机体系）
@@ -57,24 +57,24 @@ public:
   /// @param my 磁力计 y（任意单位，机体系）
   /// @param mz 磁力计 z（任意单位，机体系）
   /// @param dt 时间步长（秒）
-  void update(double gx, double gy, double gz, double ax, double ay, double az, double mx, double my, double mz,
+  void Update(double gx, double gy, double gz, double ax, double ay, double az, double mx, double my, double mz,
               double dt);
 
   /// @brief 更新姿态（Eigen 向量接口，6轴）
   /// @param gyro 陀螺仪角速度（rad/s，机体系）
   /// @param accel 加速度计（m/s²，机体系）
   /// @param dt 时间步长（秒）
-  void update(const Eigen::Vector3d& gyro, const Eigen::Vector3d& accel, double dt);
+  void Update(const Eigen::Vector3d& gyro, const Eigen::Vector3d& accel, double dt);
 
   /// @brief 更新姿态（Eigen 向量接口，9轴）
   /// @param gyro 陀螺仪角速度（rad/s，机体系）
   /// @param accel 加速度计（m/s²，机体系）
   /// @param mag 磁力计（任意单位，机体系）
   /// @param dt 时间步长（秒）
-  void update(const Eigen::Vector3d& gyro, const Eigen::Vector3d& accel, const Eigen::Vector3d& mag, double dt);
+  void Update(const Eigen::Vector3d& gyro, const Eigen::Vector3d& accel, const Eigen::Vector3d& mag, double dt);
 
   /// @brief 获取当前姿态四元数
-  const Eigen::Quaterniond& quaternion() const {
+  const Eigen::Quaterniond& Quaternion() const {
     return q_;
   }
 
@@ -82,45 +82,55 @@ public:
   /// @param roll  横滚角（弧度）
   /// @param pitch 俯仰角（弧度）
   /// @param yaw   偏航角（弧度）
-  void eulerAngle(double& roll, double& pitch, double& yaw) const;
+  void EulerAngle(double& roll, double& pitch, double& yaw) const;
 
   /// @brief 重置姿态为单位四元数
-  void reset();
+  void Reset();
 
   /// @brief 设置加速度计融合系数
-  void setAlphaAcc(double alpha) {
+  void SetAlphaAcc(double alpha) {
     alpha_acc_ = alpha;
   }
 
   /// @brief 设置磁力计融合系数
-  void setAlphaMag(double alpha) {
+  void SetAlphaMag(double alpha) {
     alpha_mag_ = alpha;
   }
 
   /// @brief 获取加速度计融合系数
-  double alphaAcc() const {
+  double GetAlphaAcc() const {
     return alpha_acc_;
   }
 
   /// @brief 获取磁力计融合系数
-  double alphaMag() const {
+  double GetAlphaMag() const {
     return alpha_mag_;
   }
 
   /// @brief 设置轴数模式
-  void setAxisMode(AxisMode mode) {
+  void SetAxisMode(AxisMode mode) {
     mode_ = mode;
   }
 
   /// @brief 获取轴数模式
-  AxisMode axisMode() const {
+  AxisMode GetAxisMode() const {
     return mode_;
   }
 
   /// @brief 设置加速度计异常检测阈值（比例，0~1）
-  void setAccelRejectionThreshold(double threshold) {
+  void SetAccelRejectionThreshold(double threshold) {
     accel_reject_threshold_ = threshold;
   }
+
+private:
+  /// @brief 从加速度计计算重力方向误差，修正 roll/pitch
+  void correctWithAccel(const Eigen::Vector3d& accel);
+
+  /// @brief 从磁力计计算磁场方向误差，修正 yaw
+  void correctWithMag(const Eigen::Vector3d& mag);
+
+  /// @brief 检查加速度计数据是否有效（模长接近重力）
+  bool isAccelValid(const Eigen::Vector3d& accel) const;
 
 private:
   Eigen::Quaterniond q_;                      ///< 当前姿态四元数
@@ -130,15 +140,6 @@ private:
   double             accel_reject_threshold_; ///< 加速度计异常检测阈值
 
   static constexpr double GRAVITY = 9.80665;
-
-  /// @brief 从加速度计计算重力方向误差，修正 roll/pitch
-  void correctWithAccel(const Eigen::Vector3d& accel);
-
-  /// @brief 从磁力计计算磁场方向误差，修正 yaw
-  void correctWithMag(const Eigen::Vector3d& mag);
-
-  /// @brief 检查加速度计数据是否有效（模长接近重力）
-  bool isAccelValid(const Eigen::Vector3d& accel) const;
 };
 
 } // namespace imu_algorithm

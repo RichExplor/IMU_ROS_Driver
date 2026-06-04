@@ -59,9 +59,6 @@ rosrun imu_ros_driver imu_ros_publisher _port:=/dev/ttyUSB0 _baud:=115200
 | `timeout_ms` | int | `100` | 串口读取超时（毫秒），0=阻塞 |
 | `publish_custom` | bool | `true` | 是否发布自定义 `ImuData` 消息 |
 | `publish_sensor_msgs` | bool | `false` | 是否发布标准 `sensor_msgs/Imu` 和 `MagneticField` |
-| `accel_scale` | double | `1.0` | 加速度缩放系数（仅 sensor_msgs 通道） |
-| `gyro_scale` | double | `1.0` | 角速度缩放系数（仅 sensor_msgs 通道） |
-| `mag_scale` | double | `1.0` | 磁场缩放系数（仅 sensor_msgs 通道） |
 | `frame_id` | string | `imu_link` | TF 坐标系 ID |
 
 ## 话题

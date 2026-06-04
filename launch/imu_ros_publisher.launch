@@ -14,11 +14,6 @@
   <!-- 是否发布 sensor_msgs/Imu 与 sensor_msgs/MagneticField（默认 false） -->
   <param name="publish_sensor_msgs" type="bool" value="true"/>
 
-  <!-- 缩放系数（应用于 sensor_msgs 发布） -->
-  <param name="accel_scale" type="double" value="16.0"/>
-  <param name="gyro_scale" type="double" value="2000.0"/>
-  <param name="mag_scale" type="double" value="1.0"/>
-
   <!-- 坐标系 ID -->
   <param name="frame_id" value="imu_link"/>
 

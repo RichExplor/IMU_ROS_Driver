@@ -16,21 +16,28 @@ public:
 
   /// @brief 初始化串口等资源
   /// @return 成功返回 true
-  bool init();
+  bool Init();
 
   /// @brief 主循环（阻塞），持续读取串口并发布消息
-  void run();
+  void Run();
 
   /// @brief 关闭资源
-  void shutdown();
+  void Shutdown();
+
+private:
+  /// @brief 从参数服务器读取所有参数
+  void loadParams();
+
+  /// @brief 发布诊断日志（每 5 秒一次）
+  void publishDiagnostics();
 
 private:
   ros::NodeHandle nh_;
 
-  std::unique_ptr<SerialPort>                       serial_;
-  std::unique_ptr<ImuParser>                        parser_;
-  std::unique_ptr<ImuPublisher>                     publisher_;
-  std::shared_ptr<imu_algorithm::AttitudeEstimator> estimator_;
+  std::unique_ptr<SerialPort>                       serial_ptr_;
+  std::unique_ptr<ImuParser>                        parser_ptr_;
+  std::unique_ptr<ImuPublisher>                     publisher_ptr_;
+  std::shared_ptr<imu_algorithm::AttitudeEstimator> attitude_estimator_ptr_;
 
   // 串口参数
   std::string port_;
@@ -40,9 +47,6 @@ private:
   // 发布参数
   bool        publish_custom_;
   bool        publish_sensor_msgs_;
-  double      accel_scale_;
-  double      gyro_scale_;
-  double      mag_scale_;
   std::string frame_id_;
 
   // 姿态解算参数
@@ -56,10 +60,4 @@ private:
   size_t    total_frames_;
   size_t    failed_frames_;
   ros::Time last_diag_time_;
-
-  /// @brief 从参数服务器读取所有参数
-  void loadParams();
-
-  /// @brief 发布诊断日志（每 5 秒一次）
-  void publishDiagnostics();
 };

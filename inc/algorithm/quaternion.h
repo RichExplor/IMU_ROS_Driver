@@ -15,23 +15,12 @@ namespace imu_algorithm {
 /// 旋转关系：q 表示从参考系（NED/ENU）到机体系的旋转
 class QuaternionUtils {
 public:
-  /// @brief 从欧拉角（ZYX 旋转顺序，航空航天惯例）构造四元数
-  /// @param roll  横滚角（绕 X 轴，弧度）
-  /// @param pitch 俯仰角（绕 Y 轴，弧度）
-  /// @param yaw   偏航角（绕 Z 轴，弧度）
-  /// @return 对应的 Eigen 四元数
-  static Eigen::Quaterniond fromEuler(double roll, double pitch, double yaw) {
-    return Eigen::Quaterniond(Eigen::AngleAxisd(yaw, Eigen::Vector3d::UnitZ()) *
-                              Eigen::AngleAxisd(pitch, Eigen::Vector3d::UnitY()) *
-                              Eigen::AngleAxisd(roll, Eigen::Vector3d::UnitX()));
-  }
-
   /// @brief 从四元数提取欧拉角（ZYX 旋转顺序）
   /// @param q 四元数
   /// @param roll  横滚角（弧度）
   /// @param pitch 俯仰角（弧度）
   /// @param yaw   偏航角（弧度）
-  static void toEuler(const Eigen::Quaterniond& q, double& roll, double& pitch, double& yaw) {
+  static void ToEuler(const Eigen::Quaterniond& q, double& roll, double& pitch, double& yaw) {
     Eigen::Matrix3d R = q.toRotationMatrix();
 
     double sinp = -R(2, 0);
@@ -50,7 +39,7 @@ public:
   /// @param q 当前四元数
   /// @param gyro 机体系角速度（rad/s）
   /// @return 四元数导数（非单位四元数，仅用于积分）
-  static Eigen::Quaterniond derivative(const Eigen::Quaterniond& q, const Eigen::Vector3d& gyro) {
+  static Eigen::Quaterniond Derivative(const Eigen::Quaterniond& q, const Eigen::Vector3d& gyro) {
     // dq/dt = 0.5 * q * (0, ω)
     // 手动展开 Hamilton 乘积：
     // q = (q0, q1, q2, q3), ω_quat = (0, ωx, ωy, ωz)
@@ -66,28 +55,21 @@ public:
   }
 
   /// @brief 计算四元数导数 dq/dt = 0.5 * q ⊗ ω（标量参数版本）
-  static Eigen::Quaterniond derivative(const Eigen::Quaterniond& q, double gx, double gy, double gz) {
-    return derivative(q, Eigen::Vector3d(gx, gy, gz));
+  static Eigen::Quaterniond Derivative(const Eigen::Quaterniond& q, double gx, double gy, double gz) {
+    return Derivative(q, Eigen::Vector3d(gx, gy, gz));
   }
 
   /// @brief 使用四元数旋转向量（q * v * q^-1）
-  static Eigen::Vector3d rotateVector(const Eigen::Quaterniond& q, const Eigen::Vector3d& v) {
+  static Eigen::Vector3d RotateVector(const Eigen::Quaterniond& q, const Eigen::Vector3d& v) {
     return q * v;
   }
 
   /// @brief 使用四元数的逆旋转向量（q^-1 * v * q）
-  static Eigen::Vector3d inverseRotateVector(const Eigen::Quaterniond& q, const Eigen::Vector3d& v) {
+  static Eigen::Vector3d InverseRotateVector(const Eigen::Quaterniond& q, const Eigen::Vector3d& v) {
     return q.conjugate() * v;
   }
 
-  /// @brief 确保四元数位于正半球（w >= 0）
-  static Eigen::Quaterniond ensurePositive(const Eigen::Quaterniond& q) {
-    if (q.w() < 0.0) {
-      return Eigen::Quaterniond(-q.w(), -q.x(), -q.y(), -q.z());
-    }
-    return q;
-  }
-
+public:
   static constexpr double PI = 3.14159265358979323846;
 };
 

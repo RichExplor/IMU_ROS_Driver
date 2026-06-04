@@ -8,132 +8,132 @@ AttitudeEstimator::AttitudeEstimator(AlgorithmType algo, AxisMode axis_mode, dou
     : algo_(algo), axis_mode_(axis_mode), alpha_acc_(alpha_acc), alpha_mag_(alpha_mag) {
   // 根据算法类型创建对应的滤波器实例
   if (algo_ == AlgorithmType::COMPLEMENTARY) {
-    comp_filter_ = std::make_unique<ComplementaryFilter>(toCompAxisMode(axis_mode_), alpha_acc_, alpha_mag_);
+    comp_filter_ptr_ = std::make_unique<ComplementaryFilter>(toCompAxisMode(axis_mode_), alpha_acc_, alpha_mag_);
   } else {
-    rk4_filter_ = std::make_unique<RK4Integration>(toRK4AxisMode(axis_mode_), alpha_acc_, alpha_mag_);
+    rk4_filter_ptr_ = std::make_unique<RK4Integration>(toRK4AxisMode(axis_mode_), alpha_acc_, alpha_mag_);
   }
 }
 
-void AttitudeEstimator::update(double gx, double gy, double gz, double ax, double ay, double az, double dt) {
-  update(Eigen::Vector3d(gx, gy, gz), Eigen::Vector3d(ax, ay, az), dt);
+void AttitudeEstimator::Update(double gx, double gy, double gz, double ax, double ay, double az, double dt) {
+  Update(Eigen::Vector3d(gx, gy, gz), Eigen::Vector3d(ax, ay, az), dt);
 }
 
-void AttitudeEstimator::update(double gx, double gy, double gz, double ax, double ay, double az, double mx, double my,
+void AttitudeEstimator::Update(double gx, double gy, double gz, double ax, double ay, double az, double mx, double my,
                                double mz, double dt) {
-  update(Eigen::Vector3d(gx, gy, gz), Eigen::Vector3d(ax, ay, az), Eigen::Vector3d(mx, my, mz), dt);
+  Update(Eigen::Vector3d(gx, gy, gz), Eigen::Vector3d(ax, ay, az), Eigen::Vector3d(mx, my, mz), dt);
 }
 
-void AttitudeEstimator::update(const Eigen::Vector3d& gyro, const Eigen::Vector3d& accel, double dt) {
+void AttitudeEstimator::Update(const Eigen::Vector3d& gyro, const Eigen::Vector3d& accel, double dt) {
   if (algo_ == AlgorithmType::COMPLEMENTARY) {
-    comp_filter_->update(gyro, accel, dt);
+    comp_filter_ptr_->Update(gyro, accel, dt);
   } else {
-    rk4_filter_->update(gyro, accel, dt);
+    rk4_filter_ptr_->Update(gyro, accel, dt);
   }
 }
 
-void AttitudeEstimator::update(const Eigen::Vector3d& gyro, const Eigen::Vector3d& accel, const Eigen::Vector3d& mag,
+void AttitudeEstimator::Update(const Eigen::Vector3d& gyro, const Eigen::Vector3d& accel, const Eigen::Vector3d& mag,
                                double dt) {
   if (algo_ == AlgorithmType::COMPLEMENTARY) {
-    comp_filter_->update(gyro, accel, mag, dt);
+    comp_filter_ptr_->Update(gyro, accel, mag, dt);
   } else {
-    rk4_filter_->update(gyro, accel, mag, dt);
+    rk4_filter_ptr_->Update(gyro, accel, mag, dt);
   }
 }
 
-const Eigen::Quaterniond& AttitudeEstimator::quaternion() const {
+const Eigen::Quaterniond& AttitudeEstimator::Quaternion() const {
   if (algo_ == AlgorithmType::COMPLEMENTARY) {
-    return comp_filter_->quaternion();
+    return comp_filter_ptr_->Quaternion();
   } else {
-    return rk4_filter_->quaternion();
+    return rk4_filter_ptr_->Quaternion();
   }
 }
 
-void AttitudeEstimator::eulerAngle(double& roll, double& pitch, double& yaw) const {
+void AttitudeEstimator::EulerAngle(double& roll, double& pitch, double& yaw) const {
   if (algo_ == AlgorithmType::COMPLEMENTARY) {
-    comp_filter_->eulerAngle(roll, pitch, yaw);
+    comp_filter_ptr_->EulerAngle(roll, pitch, yaw);
   } else {
-    rk4_filter_->eulerAngle(roll, pitch, yaw);
+    rk4_filter_ptr_->EulerAngle(roll, pitch, yaw);
   }
 }
 
-void AttitudeEstimator::reset() {
+void AttitudeEstimator::Reset() {
   if (algo_ == AlgorithmType::COMPLEMENTARY) {
-    comp_filter_->reset();
+    comp_filter_ptr_->Reset();
   } else {
-    rk4_filter_->reset();
+    rk4_filter_ptr_->Reset();
   }
 }
 
-void AttitudeEstimator::setAlgorithm(AlgorithmType algo) {
+void AttitudeEstimator::SetAlgorithm(AlgorithmType algo) {
   if (algo == algo_)
     return;
 
   algo_ = algo;
 
   // 释放旧算法，创建新算法
-  comp_filter_.reset();
-  rk4_filter_.reset();
+  comp_filter_ptr_.reset();
+  rk4_filter_ptr_.reset();
 
   if (algo_ == AlgorithmType::COMPLEMENTARY) {
-    comp_filter_ = std::make_unique<ComplementaryFilter>(toCompAxisMode(axis_mode_), alpha_acc_, alpha_mag_);
+    comp_filter_ptr_ = std::make_unique<ComplementaryFilter>(toCompAxisMode(axis_mode_), alpha_acc_, alpha_mag_);
   } else {
-    rk4_filter_ = std::make_unique<RK4Integration>(toRK4AxisMode(axis_mode_), alpha_acc_, alpha_mag_);
+    rk4_filter_ptr_ = std::make_unique<RK4Integration>(toRK4AxisMode(axis_mode_), alpha_acc_, alpha_mag_);
   }
 }
 
-void AttitudeEstimator::setAxisMode(AxisMode mode) {
+void AttitudeEstimator::SetAxisMode(AxisMode mode) {
   axis_mode_ = mode;
 
   if (algo_ == AlgorithmType::COMPLEMENTARY) {
-    comp_filter_->setAxisMode(toCompAxisMode(mode));
+    comp_filter_ptr_->SetAxisMode(toCompAxisMode(mode));
   } else {
-    rk4_filter_->setAxisMode(toRK4AxisMode(mode));
+    rk4_filter_ptr_->SetAxisMode(toRK4AxisMode(mode));
   }
 }
 
-void AttitudeEstimator::setAlphaAcc(double alpha) {
+void AttitudeEstimator::SetAlphaAcc(double alpha) {
   alpha_acc_ = alpha;
   if (algo_ == AlgorithmType::COMPLEMENTARY) {
-    comp_filter_->setAlphaAcc(alpha);
+    comp_filter_ptr_->SetAlphaAcc(alpha);
   } else {
-    rk4_filter_->setAlphaAcc(alpha);
+    rk4_filter_ptr_->SetAlphaAcc(alpha);
   }
 }
 
-void AttitudeEstimator::setAlphaMag(double alpha) {
+void AttitudeEstimator::SetAlphaMag(double alpha) {
   alpha_mag_ = alpha;
   if (algo_ == AlgorithmType::COMPLEMENTARY) {
-    comp_filter_->setAlphaMag(alpha);
+    comp_filter_ptr_->SetAlphaMag(alpha);
   } else {
-    rk4_filter_->setAlphaMag(alpha);
+    rk4_filter_ptr_->SetAlphaMag(alpha);
   }
 }
 
-double AttitudeEstimator::alphaAcc() const {
+double AttitudeEstimator::GetAlphaAcc() const {
   if (algo_ == AlgorithmType::COMPLEMENTARY) {
-    return comp_filter_->alphaAcc();
+    return comp_filter_ptr_->GetAlphaAcc();
   } else {
-    return rk4_filter_->alphaAcc();
+    return rk4_filter_ptr_->GetAlphaAcc();
   }
 }
 
-double AttitudeEstimator::alphaMag() const {
+double AttitudeEstimator::GetAlphaMag() const {
   if (algo_ == AlgorithmType::COMPLEMENTARY) {
-    return comp_filter_->alphaMag();
+    return comp_filter_ptr_->GetAlphaMag();
   } else {
-    return rk4_filter_->alphaMag();
+    return rk4_filter_ptr_->GetAlphaMag();
   }
 }
 
-void AttitudeEstimator::setAccelRejectionThreshold(double threshold) {
+void AttitudeEstimator::SetAccelRejectionThreshold(double threshold) {
   if (algo_ == AlgorithmType::COMPLEMENTARY) {
-    comp_filter_->setAccelRejectionThreshold(threshold);
+    comp_filter_ptr_->SetAccelRejectionThreshold(threshold);
   } else {
-    rk4_filter_->setAccelRejectionThreshold(threshold);
+    rk4_filter_ptr_->SetAccelRejectionThreshold(threshold);
   }
 }
 
-const char* AttitudeEstimator::algorithmName() const {
+const char* AttitudeEstimator::GetAlgorithmName() const {
   switch (algo_) {
   case AlgorithmType::COMPLEMENTARY:
     return "complementary";
@@ -144,7 +144,7 @@ const char* AttitudeEstimator::algorithmName() const {
   }
 }
 
-const char* AttitudeEstimator::axisModeName() const {
+const char* AttitudeEstimator::GetAxisModeName() const {
   switch (axis_mode_) {
   case AxisMode::SIX_AXIS:
     return "6-axis";
@@ -155,7 +155,7 @@ const char* AttitudeEstimator::axisModeName() const {
   }
 }
 
-AttitudeEstimator::AlgorithmType AttitudeEstimator::algorithmFromString(const std::string& name) {
+AttitudeEstimator::AlgorithmType AttitudeEstimator::AlgorithmFromString(const std::string& name) {
   std::string lower = name;
   std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
 
@@ -166,7 +166,7 @@ AttitudeEstimator::AlgorithmType AttitudeEstimator::algorithmFromString(const st
   return AlgorithmType::COMPLEMENTARY;
 }
 
-AttitudeEstimator::AxisMode AttitudeEstimator::axisModeFromString(const std::string& name) {
+AttitudeEstimator::AxisMode AttitudeEstimator::AxisModeFromString(const std::string& name) {
   std::string lower = name;
   std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
 

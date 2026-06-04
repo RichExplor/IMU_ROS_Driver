@@ -7,14 +7,14 @@ int main(int argc, char** argv) {
 
   ImuDriverNode imu_driver_node(nh);
 
-  if (!imu_driver_node.init()) {
+  if (!imu_driver_node.Init()) {
     ROS_ERROR("Failed to initialize IMU driver node");
     return 1;
   }
 
   ROS_INFO("IMU driver node started");
-  imu_driver_node.run();
-  imu_driver_node.shutdown();
+  imu_driver_node.Run();
+  imu_driver_node.Shutdown();
 
   return 0;
 }

@@ -8,18 +8,18 @@ ComplementaryFilter::ComplementaryFilter(AxisMode mode, double alpha_acc, double
       accel_reject_threshold_(0.3) {
 }
 
-void ComplementaryFilter::update(double gx, double gy, double gz, double ax, double ay, double az, double dt) {
-  update(Eigen::Vector3d(gx, gy, gz), Eigen::Vector3d(ax, ay, az), dt);
+void ComplementaryFilter::Update(double gx, double gy, double gz, double ax, double ay, double az, double dt) {
+  Update(Eigen::Vector3d(gx, gy, gz), Eigen::Vector3d(ax, ay, az), dt);
 }
 
-void ComplementaryFilter::update(double gx, double gy, double gz, double ax, double ay, double az, double mx, double my,
+void ComplementaryFilter::Update(double gx, double gy, double gz, double ax, double ay, double az, double mx, double my,
                                  double mz, double dt) {
-  update(Eigen::Vector3d(gx, gy, gz), Eigen::Vector3d(ax, ay, az), Eigen::Vector3d(mx, my, mz), dt);
+  Update(Eigen::Vector3d(gx, gy, gz), Eigen::Vector3d(ax, ay, az), Eigen::Vector3d(mx, my, mz), dt);
 }
 
-void ComplementaryFilter::update(const Eigen::Vector3d& gyro, const Eigen::Vector3d& accel, double dt) {
+void ComplementaryFilter::Update(const Eigen::Vector3d& gyro, const Eigen::Vector3d& accel, double dt) {
   // 1. 陀螺仪积分：一阶近似 q_new = q + dq/dt * dt
-  Eigen::Quaterniond dq = QuaternionUtils::derivative(q_, gyro);
+  Eigen::Quaterniond dq = QuaternionUtils::Derivative(q_, gyro);
   // 四元数加法 + 缩放：q_ += dq * dt
   q_.coeffs() += dq.coeffs() * dt;
   q_.normalize();
@@ -28,10 +28,10 @@ void ComplementaryFilter::update(const Eigen::Vector3d& gyro, const Eigen::Vecto
   correctWithAccel(accel);
 }
 
-void ComplementaryFilter::update(const Eigen::Vector3d& gyro, const Eigen::Vector3d& accel, const Eigen::Vector3d& mag,
+void ComplementaryFilter::Update(const Eigen::Vector3d& gyro, const Eigen::Vector3d& accel, const Eigen::Vector3d& mag,
                                  double dt) {
   // 1. 陀螺仪积分
-  Eigen::Quaterniond dq = QuaternionUtils::derivative(q_, gyro);
+  Eigen::Quaterniond dq = QuaternionUtils::Derivative(q_, gyro);
   q_.coeffs() += dq.coeffs() * dt;
   q_.normalize();
 
@@ -81,14 +81,14 @@ void ComplementaryFilter::correctWithMag(const Eigen::Vector3d& mag) {
   Eigen::Vector3d m_norm = mag / norm;
 
   // 将磁力计测量值从机体系转到参考系（水平面）
-  Eigen::Vector3d mag_ref = QuaternionUtils::inverseRotateVector(q_, m_norm);
+  Eigen::Vector3d mag_ref = QuaternionUtils::InverseRotateVector(q_, m_norm);
 
   // 在水平面上投影，忽略 z 分量，得到磁场水平方向
   double bx = std::sqrt(mag_ref.x() * mag_ref.x() + mag_ref.y() * mag_ref.y());
   double bz = mag_ref.z();
 
   // 参考磁场方向在机体系的表示：将 (bx, 0, bz) 从参考系旋转回机体系
-  Eigen::Vector3d mag_body = QuaternionUtils::rotateVector(q_, Eigen::Vector3d(bx, 0.0, bz));
+  Eigen::Vector3d mag_body = QuaternionUtils::RotateVector(q_, Eigen::Vector3d(bx, 0.0, bz));
 
   // 计算误差：测量方向 × 参考方向
   Eigen::Vector3d error = m_norm.cross(mag_body);
@@ -108,11 +108,11 @@ bool ComplementaryFilter::isAccelValid(const Eigen::Vector3d& accel) const {
   return ratio < accel_reject_threshold_;
 }
 
-void ComplementaryFilter::eulerAngle(double& roll, double& pitch, double& yaw) const {
-  QuaternionUtils::toEuler(q_, roll, pitch, yaw);
+void ComplementaryFilter::EulerAngle(double& roll, double& pitch, double& yaw) const {
+  QuaternionUtils::ToEuler(q_, roll, pitch, yaw);
 }
 
-void ComplementaryFilter::reset() {
+void ComplementaryFilter::Reset() {
   q_ = Eigen::Quaterniond::Identity();
 }
 

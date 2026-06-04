@@ -10,17 +10,17 @@ ImuParser::ImuParser() : checksum_fails_(0), frame_count_(0) {
   buf_.reserve(READ_BUF_SIZE);
 }
 
-void ImuParser::feed(const uint8_t* data, size_t len) {
+void ImuParser::Feed(const uint8_t* data, size_t len) {
   buf_.insert(buf_.end(), data, data + len);
 }
 
-bool ImuParser::parse(ImuRawData& out) {
+bool ImuParser::Parse(ImuRawData& out) {
   // 需要至少 header(2) + TID(2) + LEN(1) + CK(2) = 7 字节
   while (buf_.size() >= HEADER_SIZE + 2 + 1 + 2) {
-    // 查找帧头
+
+    // 搜索帧头
     auto it = std::search(buf_.begin(), buf_.end(), HEADER_.begin(), HEADER_.end());
     if (it == buf_.end()) {
-      // 未找到帧头，保留最后 HEADER_SIZE-1 字节（可能是部分帧头）
       if (buf_.size() > HEADER_SIZE - 1) {
         buf_.erase(buf_.begin(), buf_.end() - (HEADER_SIZE - 1));
       }
@@ -46,11 +46,12 @@ bool ImuParser::parse(ImuRawData& out) {
 
     // 校验和验证（从 TID 开始累加到 MESSAGE 结束，包含 LEN 字节）
     if (!validateChecksum(pos)) {
-      // 增加校验失败计数（wrap to zero）
-      if (checksum_fails_ == std::numeric_limits<size_t>::max())
+      if (checksum_fails_ == std::numeric_limits<size_t>::max()) {
         checksum_fails_ = 0;
-      else
+      } else {
         ++checksum_fails_;
+      }
+
       // 跳过当前帧头的第一个字节，重新搜索
       buf_.erase(buf_.begin() + pos);
       continue;
@@ -111,7 +112,7 @@ bool ImuParser::parse(ImuRawData& out) {
           out.has_gyro = true;
         }
         break;
-      case 0x30: // 磁场归一化 (x,y,z) 每轴 4 字节，单位 1e-6 (无量纲)
+      case 0x30: // 磁场归一化 (x,y,z) 每轴 4 字节，Value = DATA * 1e-6 (无量纲)
         if (pkt_len >= 12) {
           out.hx           = read_i32(0);
           out.hy           = read_i32(4);
@@ -119,18 +120,18 @@ bool ImuParser::parse(ImuRawData& out) {
           out.has_mag_norm = true;
         }
         break;
-      case 0x31: // 磁场强度 (x,y,z) 每轴 4 字节，单位 mGauss * 0.001
+      case 0x31: // 磁场强度 (x,y,z) 每轴 4 字节，Value = DATA * 0.001 mGauss
         if (pkt_len >= 12) {
-          out.hx               = read_i32(0);
-          out.hy               = read_i32(4);
-          out.hz               = read_i32(8);
+          out.mx               = read_i32(0);
+          out.my               = read_i32(4);
+          out.mz               = read_i32(8);
           out.has_mag_strength = true;
         }
         break;
-      case 0x40: // 欧拉角 (p,r,y) 每轴 4 字节，单位 1e-6 deg
+      case 0x40: // 欧拉角 (Pitch, Roll, Yaw) 每轴 4 字节，Value = DATA * 1e-6 deg
         if (pkt_len >= 12) {
-          out.roll      = read_i32(0);
-          out.pitch     = read_i32(4);
+          out.pitch     = read_i32(0);
+          out.roll      = read_i32(4);
           out.yaw       = read_i32(8);
           out.has_euler = true;
         }
@@ -145,7 +146,6 @@ bool ImuParser::parse(ImuRawData& out) {
         }
         break;
       default:
-        // 未知数据 ID，跳过
         break;
       }
 
@@ -168,18 +168,23 @@ bool ImuParser::parse(ImuRawData& out) {
 }
 
 bool ImuParser::validateChecksum(size_t pos) const {
-  // 从 TID 开始累加到 MESSAGE 结束（包含 LEN）
+  // 双重累加校验：从 TID 开始累加到 MESSAGE 结束（包含 LEN 字节）
+  // CK1 = 所有累加字节的低 8 位之和的低 8 位
+  // CK2 = 所有累加字节的高 8 位之和的低 8 位（即 CK1 累加过程中的进位累加）
   size_t  tid_pos = pos + HEADER_SIZE;
   uint8_t len     = buf_[pos + HEADER_SIZE + 2];
   size_t  msg_end = pos + HEADER_SIZE + 2 + 1 + static_cast<size_t>(len); // first byte after MESSAGE
 
-  uint32_t sum = 0;
+  uint8_t ck1 = 0, ck2 = 0;
   for (size_t i = tid_pos; i < msg_end; ++i) {
-    sum += buf_[i];
+    ck1 += buf_[i];
+    ck2 += ck1;
   }
 
-  uint16_t expected = static_cast<uint16_t>(buf_[msg_end]) | (static_cast<uint16_t>(buf_[msg_end + 1]) << 8);
-  return static_cast<uint16_t>(sum & 0xFFFF) == expected;
+  // 校验码 CK1, CK2 紧跟在 MESSAGE 之后（小端：CK1 在低地址，CK2 在高地址）
+  uint8_t expected_ck1 = buf_[msg_end];
+  uint8_t expected_ck2 = buf_[msg_end + 1];
+  return (ck1 == expected_ck1) && (ck2 == expected_ck2);
 }
 
 int16_t ImuParser::readI16(size_t offset) const {
